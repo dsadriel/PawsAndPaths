@@ -2,18 +2,60 @@ import SwiftUI
 
 public struct GameView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.appTheme) private var appTheme
+    @Environment(\.appTheme) private var fallbackAppTheme
     @StateObject private var viewModel: NonogramGameViewModel
     @ObservedObject private var progressManager = CampaignProgressManager.shared
 
+    private var levelTheme: ChapterTheme {
+        viewModel.campaignLevel?.theme ?? .meadow
+    }
+
+    private var appTheme: any AppTheme {
+        levelTheme.appTheme
+    }
+
+    private var activeActionPair: Theme.Colors.ActionPair {
+        switch levelTheme {
+        case .meadow:
+            return Theme.Colors.primaryAction
+        case .autumn:
+            return Theme.Colors.autumnAction
+        case .winter:
+            return Theme.Colors.winterAction
+        }
+    }
+
+    private var backgroundMultiply: Color {
+        .white
+    }
+
+    private var backgroundOverlay: Color {
+        Color.black.opacity(0.03)
+    }
+
     @State private var animatedCoinsBounced: Bool = false
-    @State private var showingHintAlert: Bool = false
-    @State private var showingInsufficientCoinsAlert: Bool = false
+    @State private var showingHintOverlay: Bool = false
+    @State private var showingInsufficientCoinsOverlay: Bool = false
+    @State private var showingRewardModal: Bool = false
+    @State private var rewardProgress: CGFloat = 0.0
+    @State private var rewardClaimed: Bool = false
+    @State private var showingResetConfirmationAlert: Bool = false
+    @State private var isDraggingActive: Bool = false
     private var onDismiss: (() -> Void)?
 
-    public init(campaignLevel: CampaignLevel? = nil, onDismiss: (() -> Void)? = nil) {
-        _viewModel = StateObject(wrappedValue: NonogramGameViewModel(campaignLevel: campaignLevel))
+    public enum InitialOverlayState {
+        case none, hint, insufficientCoins, victory
+    }
+
+    public init(campaignLevel: CampaignLevel? = nil, initialOverlay: InitialOverlayState = .none, onDismiss: (() -> Void)? = nil) {
+        let vm = NonogramGameViewModel(campaignLevel: campaignLevel)
+        if initialOverlay == .victory {
+            vm.setSimulatedVictoryState()
+        }
+        _viewModel = StateObject(wrappedValue: vm)
         self.onDismiss = onDismiss
+        _showingHintOverlay = State(initialValue: initialOverlay == .hint)
+        _showingInsufficientCoinsOverlay = State(initialValue: initialOverlay == .insufficientCoins)
     }
 
     public var body: some View {
@@ -25,8 +67,9 @@ public struct GameView: View {
                         Image(bgName)
                             .resizable()
                             .scaledToFill()
+                            .colorMultiply(backgroundMultiply)
                             .clipped()
-                            .overlay(Color.black.opacity(0.04))
+                            .overlay(backgroundOverlay)
                     } else {
                         LinearGradient(
                             colors: [appTheme.colors.sky.opacity(0.4), appTheme.colors.ground.opacity(0.3)],
@@ -41,7 +84,7 @@ public struct GameView: View {
                     // Top clean navigation header: "Fase X" (bold) and subtitle below
                     cleanHeaderView
                         .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.top, Theme.Spacing.sm)
+                        .padding(.top, Theme.Spacing.md)
 
                     Spacer(minLength: Theme.Spacing.xs)
 
@@ -51,53 +94,100 @@ public struct GameView: View {
 
                     Spacer(minLength: Theme.Spacing.xs)
 
-                    // Bottom controls: Hidden smoothly when puzzle is solved / during celebration
-                    if !viewModel.isSolved {
-                        bottomControlsView
-                            .padding(.bottom, Theme.Spacing.md)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                    // Bottom controls: Hidden smoothly when puzzle is solved, keeping height fixed so grid doesn't move
+                    bottomControlsView
+                        .padding(.bottom, Theme.Spacing.md)
+                        .opacity(viewModel.isSolved ? 0 : 1)
+                        .disabled(viewModel.isSolved)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: viewModel.isSolved)
                 }
                 .frame(width: screenGeo.size.width, height: screenGeo.size.height)
-                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: viewModel.isSolved)
+
+                // Fast-forward hold overlay (ONLY active during reveal animation before celebration modal)
+                if viewModel.isSolved && !viewModel.isCompletedCelebration {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in
+                                    viewModel.isHoldingScreen = true
+                                }
+                                .onEnded { _ in
+                                    viewModel.isHoldingScreen = false
+                                }
+                        )
+                }
 
                 // Victory Modal Overlay
                 if viewModel.isCompletedCelebration {
-                    Color.black.opacity(0.35)
+                    Color.black.opacity(0.4)
                         .ignoresSafeArea()
                         .transition(.opacity)
 
                     victoryOverlayView
-                        .padding(.horizontal, Theme.Spacing.xl)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+
+                // Simulated Rewarded Video Ad Modal
+                if showingRewardModal {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+
+                    rewardedVideoModalView
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+
+                // Hint Confirmation Modal Overlay
+                if showingHintOverlay {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                showingHintOverlay = false
+                            }
+                        }
+
+                    hintConfirmationModalView
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+
+                // Insufficient Coins Modal Overlay
+                if showingInsufficientCoinsOverlay {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                showingInsufficientCoinsOverlay = false
+                            }
+                        }
+
+                    insufficientCoinsModalView
+                        .padding(.horizontal, Theme.Spacing.lg)
                         .transition(.scale(scale: 0.85).combined(with: .opacity))
                 }
             }
             .frame(width: screenGeo.size.width, height: screenGeo.size.height)
         }
+        .appTheme(appTheme)
         .navigationBarHidden(true)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if viewModel.isSolved && !viewModel.isCompletedCelebration {
-                        viewModel.isHoldingScreen = true
-                    }
+        .alert("Reiniciar Fase?", isPresented: $showingResetConfirmationAlert) {
+            Button("Reiniciar", role: .destructive) {
+                withAnimation {
+                    viewModel.resetCurrentLevel()
                 }
-                .onEnded { _ in
-                    viewModel.isHoldingScreen = false
-                }
-        )
-        .alert("Usar Dica", isPresented: $showingHintAlert) {
-            Button("Confirmar (3 🪙)") {
-                _ = viewModel.usePurchasedHint()
             }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Deseja gastar 3 moedas para revelar o próximo passo do caminho?")
+            Text("Todo o seu progresso nesta fase será apagado.")
         }
-        .alert("Moedas Insuficientes", isPresented: $showingInsufficientCoinsAlert) {
-            Button("Entendi", role: .cancel) {}
-        } message: {
-            Text("Você precisa de 3 moedas para usar uma dica. Conclua fases para ganhar mais moedas!")
+        .onDisappear {
+            viewModel.persistCurrentProgressIfNeeded()
         }
         .onChange(of: viewModel.isCompletedCelebration) { isCelebrating in
             if isCelebrating {
@@ -123,50 +213,49 @@ public struct GameView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .bold))
                 }
-                .buttonStyle(ChunkyCircleButtonStyle(actionPair: Theme.Colors.secondaryAction, diameter: 42))
+                .buttonStyle(ChunkyCircleButtonStyle(actionPair: Theme.Colors.secondaryAction, diameter: 40))
                 .transition(.scale.combined(with: .opacity))
             } else {
-                Spacer().frame(width: 42)
+                Spacer().frame(width: 40)
             }
 
             Spacer()
 
-            // Header Title: "Fase X" (bold), subtitle below
-            VStack(spacing: 2) {
+            // Header Title: "Fase X" (bold), subtitle below (Unified geometry with CounterPill)
+            VStack(spacing: 1) {
                 Text("Fase \(viewModel.campaignLevel?.id ?? 1)")
                     .font(Theme.Typography.headline())
                     .fontWeight(.heavy)
                     .foregroundColor(Theme.Colors.inkPrimary)
 
-                Text(viewModel.campaignLevel?.subtitle ?? "O Gatinho e o Novelo")
+                Text(viewModel.campaignLevel?.subtitle ?? levelTheme.title)
                     .font(Theme.Typography.caption())
                     .foregroundColor(Theme.Colors.inkSecondary)
             }
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, 5)
+            .padding(.vertical, 6)
             .background(
-                Capsule()
-                    .fill(Theme.Colors.creamSurface.opacity(0.94))
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .fill(Theme.Colors.creamSurface)
                     .overlay(
-                        Capsule()
-                            .stroke(Theme.Colors.creamOutline.opacity(0.85), lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.creamOutline, lineWidth: 1.5)
                     )
-                    .shadow(color: Theme.Colors.woodDark.opacity(0.08), radius: 4, y: 2)
+                    .shadow(color: Theme.Colors.woodDark.opacity(0.1), radius: 4, x: 0, y: 2)
             )
 
             Spacer()
 
             if !viewModel.isSolved {
-                Button {
-                    viewModel.resetCurrentLevel()
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .buttonStyle(ChunkyCircleButtonStyle(actionPair: Theme.Colors.disabledAction, diameter: 42))
+                // Total Coins Counter Pill with clean single background
+                CounterPill(
+                    iconAssetName: "icon_seed_coin",
+                    iconSize: 22,
+                    value: "\(progressManager.coins)"
+                )
                 .transition(.scale.combined(with: .opacity))
             } else {
-                Spacer().frame(width: 42)
+                Spacer().frame(width: 40)
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: viewModel.isSolved)
@@ -315,39 +404,54 @@ public struct GameView: View {
                 .onChanged { value in
                     let distance = hypot(value.translation.width, value.translation.height)
                     if distance > 6 {
-                        let step = cellSize + spacing
-                        let c = Int((value.location.x - 3) / step)
-                        let r = Int((value.location.y - 3) / step)
-                        let pos = GridPosition(row: r, col: c)
-                        viewModel.continueDrag(at: pos)
+                        if !isDraggingActive {
+                            isDraggingActive = true
+                            if let startPos = cellPosition(for: value.startLocation, cellSize: cellSize, spacing: spacing) {
+                                viewModel.beginDrag(at: startPos)
+                            }
+                        }
+                        if let currentPos = cellPosition(for: value.location, cellSize: cellSize, spacing: spacing) {
+                            viewModel.continueDrag(at: currentPos)
+                        }
                     }
                 }
                 .onEnded { value in
-                    let distance = hypot(value.translation.width, value.translation.height)
-                    if distance <= 6 {
-                        let step = cellSize + spacing
-                        let c = Int((value.location.x - 3) / step)
-                        let r = Int((value.location.y - 3) / step)
-                        let pos = GridPosition(row: r, col: c)
-                        viewModel.handleCellTap(at: pos)
+                    if !isDraggingActive {
+                        if let tapPos = cellPosition(for: value.location, cellSize: cellSize, spacing: spacing) {
+                            viewModel.handleCellTap(at: tapPos)
+                        }
                     }
                     viewModel.endDrag()
+                    isDraggingActive = false
                 }
         )
     }
 
-    // MARK: - Bottom Floating Controls: Mode Toggle & Hint
+    // MARK: - Bottom Floating Controls: Restart, Mode Toggle & Hint
     private var bottomControlsView: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: Theme.Spacing.sm) {
+            // Restart Level Button (Confirmation alert before resetting)
+            Button {
+                showingResetConfirmationAlert = true
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 15, weight: .bold))
+            }
+            .buttonStyle(ChunkyCircleButtonStyle(actionPair: Theme.Colors.secondaryAction, diameter: 40))
+
             // Mode Toggle Switch (Trilha 🐾 vs Vazio ✕)
             modeToggleSwitch
 
-            // Hint Button (Confirmation alert before spending 3 coins)
+            // Hint Button (Custom overlay before spending 3 coins)
             Button {
                 if progressManager.canAffordHint(cost: 3) {
-                    showingHintAlert = true
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        showingHintOverlay = true
+                    }
                 } else {
-                    showingInsufficientCoinsAlert = true
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        showingInsufficientCoinsOverlay = true
+                    }
                 }
             } label: {
                 HStack(spacing: 6) {
@@ -368,7 +472,7 @@ public struct GameView: View {
             )
             .disabled(viewModel.isSolved)
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.horizontal, Theme.Spacing.sm)
         .padding(.vertical, Theme.Spacing.xs)
         .background(
             Capsule()
@@ -403,8 +507,8 @@ public struct GameView: View {
                     Group {
                         if viewModel.inputMode == .path {
                             Capsule()
-                                .fill(Theme.Colors.primaryAction.face)
-                                .shadow(color: Theme.Colors.primaryAction.lip.opacity(0.4), radius: 2, y: 1)
+                                .fill(activeActionPair.face)
+                                .shadow(color: activeActionPair.lip.opacity(0.4), radius: 2, y: 1)
                         } else {
                             Color.clear
                         }
@@ -450,56 +554,48 @@ public struct GameView: View {
         )
     }
 
-    // MARK: - Victory Overlay Modal (Rewarding +5 Coins with celebration)
+    // MARK: - Victory Overlay Modal (Rewarding Coins with celebration)
     private var victoryOverlayView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                .fill(Theme.Colors.creamSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                        .stroke(Theme.Colors.creamOutline, lineWidth: 3)
-                )
-                .shadow(color: Theme.Colors.woodDark.opacity(0.22), radius: 16, x: 0, y: 8)
-
-            VStack(spacing: Theme.Spacing.md) {
+        WoodPanel(title: "Fase Concluída!") {
+            VStack(spacing: Theme.Spacing.sm) {
                 // Mascot Celebration with Target Item
                 ZStack(alignment: .bottomTrailing) {
                     Image(appTheme.assets.mascotCelebrateAssetName)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 86, height: 86)
+                        .frame(width: 82, height: 82)
                         .shadow(color: Theme.Colors.woodDark.opacity(0.15), radius: 4, y: 2)
 
                     Image(appTheme.assets.targetItemAssetName)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
                         .offset(x: 8, y: 6)
                         .shadow(color: Theme.Colors.woodDark.opacity(0.15), radius: 3, y: 2)
                 }
                 .padding(.top, Theme.Spacing.xs)
 
-                // Joyful +5 Coins Badge
+                // Joyful Coins Badge
                 HStack(spacing: 8) {
                     Image("icon_seed_coin")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 32, height: 32)
+                        .frame(width: 28, height: 28)
                         .rotationEffect(.degrees(animatedCoinsBounced ? -6 : 6))
 
-                    Text("+5 Moedas")
+                    Text("+\(viewModel.lastEarnedCoins) \(viewModel.lastEarnedCoins == 1 ? "Moeda" : "Moedas")")
                         .font(Theme.Typography.title())
                         .foregroundColor(Theme.Colors.rewardAction.lip)
                 }
                 .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
                 .background(
                     Capsule()
                         .fill(Theme.Colors.creamSurface)
                         .overlay(
                             Capsule().stroke(Theme.Colors.rewardAction.lip.opacity(0.4), lineWidth: 2)
                         )
-                        .shadow(color: Theme.Colors.rewardAction.lip.opacity(0.2), radius: 6, y: 3)
+                        .shadow(color: Theme.Colors.rewardAction.lip.opacity(0.2), radius: 5, y: 2)
                 )
                 .scaleEffect(animatedCoinsBounced ? 1.05 : 0.95)
 
@@ -536,34 +632,316 @@ public struct GameView: View {
                         .overlay(Capsule().stroke(Theme.Colors.woodOutline.opacity(0.25), lineWidth: 1))
                 )
 
-                if let camp = viewModel.campaignLevel {
-                    let nextId = camp.id + 1
-                    let nextLvl = CampaignLevelGenerator.level(for: nextId)
-                    Button {
-                        viewModel.loadCampaignLevel(nextLvl)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("Próxima Fase (\(nextId))")
-                                .font(Theme.Typography.headline())
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 18))
+                // Primary Navigation Buttons
+                VStack(spacing: Theme.Spacing.sm) {
+                    if let camp = viewModel.campaignLevel {
+                        let nextId = camp.id + 1
+                        let nextLvl = CampaignLevelGenerator.level(for: nextId)
+                        Button {
+                            viewModel.loadCampaignLevel(nextLvl)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Próxima Fase")
+                                    .font(Theme.Typography.headline())
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.system(size: 18))
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
+                        .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.primaryAction))
+                    } else {
+                        Button {
+                            viewModel.nextPuzzle()
+                        } label: {
+                            Text("Próxima Fase")
+                                .font(Theme.Typography.headline())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.primaryAction))
                     }
-                    .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.primaryAction))
-                } else {
+
+                    // Return to Map button
                     Button {
-                        viewModel.nextPuzzle()
+                        onDismiss?()
+                        dismiss()
                     } label: {
-                        Text("Próxima Fase")
+                        Text("Voltar ao Mapa")
                             .font(Theme.Typography.headline())
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.primaryAction))
+                    .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.secondaryAction))
                 }
+                .padding(.top, Theme.Spacing.sm)
             }
-            .padding(.vertical, Theme.Spacing.sm)
         }
-        .frame(maxWidth: 340)
+        .frame(maxWidth: 320)
+    }
+
+    // MARK: - Rewarded Video Modal & Flow (Emergency Coins)
+    private func startRewardVideoFlow() {
+        rewardProgress = 0.0
+        rewardClaimed = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            showingRewardModal = true
+        }
+
+        withAnimation(.linear(duration: 2.2)) {
+            rewardProgress = 1.0
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            progressManager.addCoins(5)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                rewardClaimed = true
+            }
+            HapticManager.shared.rewardCollected()
+        }
+    }
+
+    private var rewardedVideoModalView: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            // Mascot Celebration / Idle
+            Image(rewardClaimed ? appTheme.assets.mascotCelebrateAssetName : appTheme.assets.mascotIdleAssetName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .padding(.top, Theme.Spacing.xs)
+
+            VStack(spacing: 4) {
+                Text(rewardClaimed ? "Recompensa Concedida!" : "Assistindo Vídeo...")
+                    .font(Theme.Typography.headline())
+                    .foregroundColor(Theme.Colors.inkPrimary)
+
+                Text(rewardClaimed ? "Você ganhou +5 moedas para continuar se divertindo!" : "Aguarde um momento para receber suas moedas de cortesia.")
+                    .font(Theme.Typography.caption())
+                    .foregroundColor(Theme.Colors.inkSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.md)
+            }
+
+            if !rewardClaimed {
+                // Animated cozy progress bar
+                GeometryReader { pGeo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Theme.Colors.creamInset)
+                        Capsule()
+                            .fill(Theme.Colors.rewardAction.face)
+                            .frame(width: max(0, pGeo.size.width * rewardProgress))
+                    }
+                }
+                .frame(height: 10)
+                .padding(.horizontal, Theme.Spacing.lg)
+            } else {
+                HStack(spacing: 8) {
+                    Image("icon_seed_coin")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 28, height: 28)
+                    Text("+5 Moedas!")
+                        .font(Theme.Typography.title())
+                        .foregroundColor(Theme.Colors.rewardAction.lip)
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Theme.Colors.creamSurface)
+                        .overlay(Capsule().stroke(Theme.Colors.rewardAction.lip.opacity(0.4), lineWidth: 2))
+                )
+            }
+
+            if rewardClaimed {
+                Button {
+                    withAnimation {
+                        showingRewardModal = false
+                    }
+                } label: {
+                    Text("Coletar e Continuar")
+                        .font(Theme.Typography.headline())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.primaryAction))
+                .padding(.horizontal, Theme.Spacing.md)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                .fill(Theme.Colors.creamSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                        .stroke(Theme.Colors.creamOutline, lineWidth: 3)
+                )
+                .shadow(color: Theme.Colors.woodDark.opacity(0.28), radius: 18, x: 0, y: 8)
+        )
+        .frame(maxWidth: 320)
+    }
+
+    // MARK: - Grid Position Helper
+    private func cellPosition(for point: CGPoint, cellSize: CGFloat, spacing: CGFloat) -> GridPosition? {
+        let localX = point.x - 3
+        let localY = point.y - 3
+        guard localX >= 0, localY >= 0 else { return nil }
+        let step = cellSize + spacing
+        let c = Int(localX / step)
+        let r = Int(localY / step)
+        guard r >= 0, r < viewModel.level.rows, c >= 0, c < viewModel.level.cols else { return nil }
+        return GridPosition(row: r, col: c)
+    }
+
+    // MARK: - Hint Confirmation Modal Overlay
+    private var hintConfirmationModalView: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.rewardAction.face.opacity(0.18))
+                    .frame(width: 72, height: 72)
+                Image("icon_hint_lamp")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 48, height: 48)
+            }
+            .padding(.top, Theme.Spacing.xs)
+
+            VStack(spacing: 6) {
+                Text("Usar Dica?")
+                    .font(Theme.Typography.title())
+                    .foregroundColor(Theme.Colors.inkPrimary)
+
+                Text("Revelar o próximo passo do caminho pelo custo de 3 moedas.")
+                    .font(Theme.Typography.body())
+                    .foregroundColor(Theme.Colors.inkSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.sm)
+            }
+
+            // Coin cost pill
+            HStack(spacing: 6) {
+                Image("icon_seed_coin")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                Text("-3 Moedas")
+                    .font(Theme.Typography.headline())
+                    .fontWeight(.heavy)
+                    .foregroundColor(Theme.Colors.inkPrimary)
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Theme.Colors.creamInset)
+                    .overlay(Capsule().stroke(Theme.Colors.creamOutline, lineWidth: 1.5))
+            )
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        showingHintOverlay = false
+                    }
+                    _ = viewModel.usePurchasedHint()
+                } label: {
+                    Text("Confirmar")
+                        .font(Theme.Typography.headline())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.rewardAction))
+
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        showingHintOverlay = false
+                    }
+                } label: {
+                    Text("Cancelar")
+                        .font(Theme.Typography.headline())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.secondaryAction))
+            }
+            .padding(.top, Theme.Spacing.xs)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                .fill(Theme.Colors.creamSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                        .stroke(Theme.Colors.creamOutline, lineWidth: 3)
+                )
+                .shadow(color: Theme.Colors.woodDark.opacity(0.28), radius: 18, x: 0, y: 8)
+        )
+        .frame(maxWidth: 320)
+    }
+
+    // MARK: - Insufficient Coins Modal Overlay
+    private var insufficientCoinsModalView: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.rewardAction.face.opacity(0.18))
+                    .frame(width: 68, height: 68)
+                Image("icon_seed_coin")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
+            }
+            .padding(.top, Theme.Spacing.xs)
+
+            VStack(spacing: 6) {
+                Text("Moedas Insuficientes")
+                    .font(Theme.Typography.title())
+                    .foregroundColor(Theme.Colors.inkPrimary)
+
+                Text("Você precisa de 3 moedas para usar uma dica. Assista a um vídeo rápido para ganhar +5 moedas grátis!")
+                    .font(Theme.Typography.body())
+                    .foregroundColor(Theme.Colors.inkSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.sm)
+            }
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        showingInsufficientCoinsOverlay = false
+                    }
+                    startRewardVideoFlow()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "play.rectangle.fill")
+                        Text("Assistir Vídeo")
+                    }
+                    .font(Theme.Typography.headline())
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.rewardAction))
+
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        showingInsufficientCoinsOverlay = false
+                    }
+                } label: {
+                    Text("Agora Não")
+                        .font(Theme.Typography.headline())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ChunkyButtonStyle(actionPair: Theme.Colors.secondaryAction))
+            }
+            .padding(.top, Theme.Spacing.xs)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                .fill(Theme.Colors.creamSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                        .stroke(Theme.Colors.creamOutline, lineWidth: 3)
+                )
+                .shadow(color: Theme.Colors.woodDark.opacity(0.28), radius: 18, x: 0, y: 8)
+        )
+        .frame(maxWidth: 320)
     }
 }

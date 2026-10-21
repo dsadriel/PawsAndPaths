@@ -42,38 +42,80 @@ public struct WindingRoadShape: Shape {
 
 /// Complete styled winding road with outer curb, inner dirt surface, and decorative center track.
 public struct StyledWindingRoadView: View {
-    @Environment(\.appTheme) private var appTheme
     public let points: [CGPoint]
+
+    public init(points: [CGPoint]) {
+        self.points = points
+    }
+
+    private struct RoadSegment: Identifiable {
+        let id: Int
+        let points: [CGPoint]
+        let theme: ChapterTheme
+    }
+
+    private var segments: [RoadSegment] {
+        guard points.count >= 2 else { return [] }
+        var result: [RoadSegment] = []
+        let chunkSize = 20
+        var startIndex = 0
+        var chapterIndex = 0
+
+        while startIndex < points.count - 1 {
+            let endIndex = min(startIndex + chunkSize, points.count - 1)
+            let segmentPoints = Array(points[startIndex...endIndex])
+            // The segment leads into the next chapter at boundary
+            let chapterLevelId = startIndex == 0 ? 1 : (startIndex + 2)
+            result.append(
+                RoadSegment(
+                    id: chapterIndex,
+                    points: segmentPoints,
+                    theme: ChapterTheme.theme(for: chapterLevelId)
+                )
+            )
+            if endIndex >= points.count - 1 {
+                break
+            }
+            startIndex = endIndex
+            chapterIndex += 1
+        }
+        return result
+    }
 
     public var body: some View {
         ZStack {
-            // Road grass embankment border
-            WindingRoadShape(points: points)
-                .stroke(
-                    appTheme.colors.track.opacity(0.45),
-                    style: StrokeStyle(lineWidth: 46, lineCap: .round, lineJoin: .round)
-                )
+            ForEach(segments) { segment in
+                let segTheme = segment.theme.appTheme
+                ZStack {
+                    // Road grass/embankment border matching chapter theme
+                    WindingRoadShape(points: segment.points)
+                        .stroke(
+                            segTheme.colors.track.opacity(0.45),
+                            style: StrokeStyle(lineWidth: 46, lineCap: .round, lineJoin: .round)
+                        )
 
-            // Inner road surface
-            WindingRoadShape(points: points)
-                .stroke(
-                    Color.white.opacity(0.85),
-                    style: StrokeStyle(lineWidth: 36, lineCap: .round, lineJoin: .round)
-                )
+                    // Inner road surface
+                    WindingRoadShape(points: segment.points)
+                        .stroke(
+                            Color.white.opacity(0.85),
+                            style: StrokeStyle(lineWidth: 36, lineCap: .round, lineJoin: .round)
+                        )
 
-            // Road surface theme tint
-            WindingRoadShape(points: points)
-                .stroke(
-                    appTheme.colors.track.opacity(0.22),
-                    style: StrokeStyle(lineWidth: 36, lineCap: .round, lineJoin: .round)
-                )
+                    // Road surface theme tint
+                    WindingRoadShape(points: segment.points)
+                        .stroke(
+                            segTheme.colors.track.opacity(0.22),
+                            style: StrokeStyle(lineWidth: 36, lineCap: .round, lineJoin: .round)
+                        )
 
-            // Decorative center stepping stone track
-            WindingRoadShape(points: points)
-                .stroke(
-                    appTheme.colors.track.opacity(0.70),
-                    style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round, dash: [6, 8])
-                )
+                    // Decorative center stepping stone track
+                    WindingRoadShape(points: segment.points)
+                        .stroke(
+                            segTheme.colors.track.opacity(0.70),
+                            style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round, dash: [6, 8])
+                        )
+                }
+            }
         }
     }
 }

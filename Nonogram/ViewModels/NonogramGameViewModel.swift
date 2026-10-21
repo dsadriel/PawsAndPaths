@@ -21,6 +21,8 @@ public final class NonogramGameViewModel: ObservableObject {
     @Published public private(set) var isRevealing: Bool = false
     @Published public private(set) var isCompletedCelebration: Bool = false
     @Published public var isHoldingScreen: Bool = false
+    @Published public private(set) var lastEarnedCoins: Int = 5
+    @Published public private(set) var revealedHintPositions: Set<GridPosition> = []
     private var revelationTask: Task<Void, Never>? = nil
 
     // Configuration
@@ -55,7 +57,18 @@ public final class NonogramGameViewModel: ObservableObject {
         let generator = ProceduralPuzzleGenerator(rows: r, cols: c)
         let generatedLevel = generator.generate(initialSeed: s, title: title)
         self.level = generatedLevel
-        self.grid = Self.makeInitialGrid(for: generatedLevel)
+
+        if let camp = campaignLevel,
+           let saved = CampaignProgressManager.shared.loadLevelProgress(id: camp.id),
+           saved.grid.count == r && saved.grid.first?.count == c {
+            self.grid = saved.grid
+            self.elapsedSeconds = saved.elapsedSeconds
+            self.revealedHintPositions = Set(saved.hints)
+        } else {
+            self.grid = Self.makeInitialGrid(for: generatedLevel)
+            self.elapsedSeconds = 0
+            self.revealedHintPositions = []
+        }
         self.mascotPosition = generatedLevel.startPos
 
         startTimer()
@@ -85,6 +98,7 @@ public final class NonogramGameViewModel: ObservableObject {
         self.mascotPosition = self.level.startPos
         self.isSolved = false
         self.elapsedSeconds = 0
+        self.revealedHintPositions.removeAll()
 
         updateSatisfaction()
         startTimer()
@@ -98,6 +112,14 @@ public final class NonogramGameViewModel: ObservableObject {
             seed: campaign.seed,
             title: "\(campaign.title): \(campaign.subtitle)"
         )
+        // Restore saved in-progress state if player was previously playing this level
+        if let saved = CampaignProgressManager.shared.loadLevelProgress(id: campaign.id),
+           saved.grid.count == campaign.rows && saved.grid.first?.count == campaign.cols {
+            self.grid = saved.grid
+            self.elapsedSeconds = saved.elapsedSeconds
+            self.revealedHintPositions = Set(saved.hints)
+            updateSatisfaction()
+        }
     }
 
     public func resetCurrentLevel() {
@@ -108,10 +130,22 @@ public final class NonogramGameViewModel: ObservableObject {
         isRevealing = false
         isCompletedCelebration = false
 
-        self.grid = Self.makeInitialGrid(for: level)
+        // Preserve all bought hints/clues on reset!
+        var newGrid = Self.makeInitialGrid(for: level)
+        for pos in revealedHintPositions {
+            if level.solutionPath.contains(pos) {
+                newGrid[pos.row][pos.col] = .path
+            } else {
+                newGrid[pos.row][pos.col] = .crossed
+            }
+        }
+
+        self.grid = newGrid
         self.isSolved = false
         self.elapsedSeconds = 0
         updateSatisfaction()
+        persistCurrentProgressIfNeeded()
+        startTimer()
     }
 
     public func nextPuzzle() {
@@ -196,6 +230,7 @@ public final class NonogramGameViewModel: ObservableObject {
         for pos in level.orderedPath {
             if isFixed(pos) { continue }
             if grid[pos.row][pos.col] != .path {
+                revealedHintPositions.insert(pos)
                 applyCellState(.path, at: pos)
                 triggerHaptic(for: .path)
                 checkVictory()
@@ -208,6 +243,7 @@ public final class NonogramGameViewModel: ObservableObject {
             for c in 0..<level.cols {
                 let pos = GridPosition(row: r, col: c)
                 if !level.solutionPath.contains(pos) && grid[r][c] == .path {
+                    revealedHintPositions.insert(pos)
                     applyCellState(.crossed, at: pos)
                     triggerHaptic(for: .crossed)
                     checkVictory()
@@ -225,6 +261,17 @@ public final class NonogramGameViewModel: ObservableObject {
     private func applyCellState(_ state: CellState, at pos: GridPosition) {
         grid[pos.row][pos.col] = state
         updateSatisfaction()
+        persistCurrentProgressIfNeeded()
+    }
+
+    public func persistCurrentProgressIfNeeded() {
+        guard let camp = campaignLevel, !isSolved else { return }
+        CampaignProgressManager.shared.saveLevelProgress(
+            id: camp.id,
+            grid: grid,
+            elapsedSeconds: elapsedSeconds,
+            hints: Array(revealedHintPositions)
+        )
     }
 
     private func triggerHaptic(for state: CellState) {
@@ -341,9 +388,11 @@ public final class NonogramGameViewModel: ObservableObject {
             }
             HapticManager.shared.victory()
 
-            // Notify campaign progress: awards 5 coins
+            // Notify campaign progress: awards coins (5 for first completion, 1 for replay)
             if let camp = campaignLevel {
-                CampaignProgressManager.shared.completeLevel(id: camp.id, elapsedSeconds: elapsedSeconds)
+                lastEarnedCoins = CampaignProgressManager.shared.completeLevel(id: camp.id, elapsedSeconds: elapsedSeconds)
+            } else {
+                lastEarnedCoins = 5
             }
         }
     }
@@ -356,5 +405,10 @@ public final class NonogramGameViewModel: ObservableObject {
                 guard let self = self, !self.isSolved else { return }
                 self.elapsedSeconds += 1
             }
+    }
+
+    public func setSimulatedVictoryState() {
+        self.isSolved = true
+        self.isCompletedCelebration = true
     }
 }

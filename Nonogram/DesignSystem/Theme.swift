@@ -91,10 +91,12 @@ public enum Theme {
         }
 
         public static let primaryAction = ActionPair(face: "#7BC74D", lip: "#4E9632")
-        public static let secondaryAction = ActionPair(face: "#4CB8E8", lip: "#2E86B8")
+        public static let secondaryAction = ActionPair(face: "#B87A4F", lip: "#8A542D", outline: "#683B1B")
         public static let dangerAction = ActionPair(face: "#EE6A4E", lip: "#B8442E")
         public static let rewardAction = ActionPair(face: "#F7C548", lip: "#C9922A")
         public static let disabledAction = ActionPair(face: "#C9BFB5", lip: "#9A9087")
+        public static let autumnAction = ActionPair(face: "#F5A623", lip: "#D35400")
+        public static let winterAction = ActionPair(face: "#5DADE2", lip: "#2E86C1")
     }
 
     // MARK: - World Palette Tokens
@@ -449,7 +451,7 @@ public struct CounterPill: View {
     }
 
     public var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: 5) {
             if let assetName = iconAssetName {
                 Image(assetName)
                     .resizable()
@@ -460,8 +462,6 @@ public struct CounterPill: View {
                     .font(.system(size: iconSize * 0.65, weight: .bold))
                     .foregroundColor(iconColor)
                     .frame(width: iconSize, height: iconSize)
-                    .background(Circle().fill(Color.white))
-                    .overlay(Circle().stroke(Theme.Colors.creamOutline, lineWidth: 1))
             }
 
             Text(value)
@@ -480,14 +480,15 @@ public struct CounterPill: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.sm)
-        .padding(.vertical, Theme.Spacing.xxs)
+        .padding(.vertical, 7)
         .background(
-            Capsule()
-                .fill(Theme.Colors.creamInset)
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .fill(Theme.Colors.creamSurface)
                 .overlay(
-                    Capsule()
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
                         .stroke(Theme.Colors.creamOutline, lineWidth: 1.5)
                 )
+                .shadow(color: Theme.Colors.woodDark.opacity(0.1), radius: 4, x: 0, y: 2)
         )
     }
 }

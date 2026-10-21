@@ -51,52 +51,34 @@ public struct CellView: View {
                 .fill(sketchBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: max(3, size * appTheme.board.cellCornerRadiusRatio))
-                        .stroke(
-                            (isStart || isEnd) ? Theme.Colors.rewardAction.face : Theme.Colors.creamOutline.opacity(0.85),
-                            lineWidth: (isStart || isEnd) ? 2 : 1
-                        )
+                        .stroke(Theme.Colors.creamOutline.opacity(0.85), lineWidth: 1)
                 )
 
             // Content inside sketch cell
             if isStart {
+                pathBlockView
                 // Start tile base marker / mat
                 ZStack {
                     Circle()
-                        .fill(Theme.Colors.creamInset)
-                        .frame(width: size * 0.60, height: size * 0.60)
+                        .fill(Color.white.opacity(0.22))
+                        .frame(width: size * 0.52, height: size * 0.52)
                     Image(systemName: "pawprint.fill")
-                        .font(.system(size: size * 0.32))
-                        .foregroundColor(Theme.Colors.inkSecondary.opacity(0.40))
+                        .font(.system(size: size * 0.28))
+                        .foregroundColor(Color.white.opacity(0.70))
                 }
             } else if isEnd {
+                pathBlockView
                 // Target item
                 Image(appTheme.assets.targetItemAssetName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: size * 0.78, height: size * 0.78)
-                    .shadow(color: Theme.Colors.woodDark.opacity(0.2), radius: 2, y: 1)
+                    .frame(width: size * 0.72, height: size * 0.72)
+                    .shadow(color: Theme.Colors.woodDark.opacity(0.35), radius: 2, y: 1)
             } else {
                 switch state {
                 case .path:
-                    // Tactile chunky marked path block with bevel highlight
-                    ZStack(alignment: .bottom) {
-                        // Lip shadow
-                        RoundedRectangle(cornerRadius: max(2, size * 0.14))
-                            .fill(Theme.Colors.woodDark)
-                            .frame(width: size * 0.82, height: size * 0.82)
-                            .offset(y: 1.5)
-
-                        // Block face
-                        RoundedRectangle(cornerRadius: max(2, size * 0.14))
-                            .fill(appTheme.colors.track)
-                            .frame(width: size * 0.82, height: size * 0.82)
-                            .overlay(
-                                // Subtle top highlight
-                                RoundedRectangle(cornerRadius: max(2, size * 0.14))
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                    .transition(.scale(scale: 0.82).combined(with: .opacity))
+                    pathBlockView
+                        .transition(.scale(scale: 0.82).combined(with: .opacity))
 
                 case .crossed:
                     // Delicate cozy pencil 'X'
@@ -112,9 +94,29 @@ public struct CellView: View {
         }
     }
 
+    private var pathBlockView: some View {
+        ZStack(alignment: .bottom) {
+            // Lip shadow
+            RoundedRectangle(cornerRadius: max(2, size * 0.14))
+                .fill(Theme.Colors.woodDark)
+                .frame(width: size * 0.82, height: size * 0.82)
+                .offset(y: 1.5)
+
+            // Block face
+            RoundedRectangle(cornerRadius: max(2, size * 0.14))
+                .fill(appTheme.colors.track)
+                .frame(width: size * 0.82, height: size * 0.82)
+                .overlay(
+                    // Subtle top highlight
+                    RoundedRectangle(cornerRadius: max(2, size * 0.14))
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+        }
+    }
+
     private var sketchBackground: Color {
         if isStart || isEnd {
-            return Theme.Colors.creamPanel
+            return Theme.Colors.creamInset
         }
         switch state {
         case .path:

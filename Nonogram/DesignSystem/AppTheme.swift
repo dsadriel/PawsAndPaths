@@ -127,10 +127,10 @@ public struct WinterTheme: AppTheme {
     )
 
     public let assets: ThemeAssets = ThemeAssets(
-        backgroundImageName: "bg_meadow_game",
-        treePropImageName: "prop_tree",
-        rockPropImageName: "prop_rock",
-        flowerPropImageName: "prop_flower_bush",
+        backgroundImageName: "bg_winter_game",
+        treePropImageName: "prop_tree_winter",
+        rockPropImageName: "prop_rock_winter",
+        flowerPropImageName: "prop_flower_winter",
         mascotIdleAssetName: "mascot_kitten_idle",
         mascotWalkAssetName: "mascot_kitten_walk",
         mascotCelebrateAssetName: "mascot_kitten_celebrate",
@@ -156,10 +156,10 @@ public struct AutumnTheme: AppTheme {
     )
 
     public let assets: ThemeAssets = ThemeAssets(
-        backgroundImageName: "bg_meadow_game",
-        treePropImageName: "prop_tree",
-        rockPropImageName: "prop_rock",
-        flowerPropImageName: "prop_flower_bush",
+        backgroundImageName: "bg_autumn_game",
+        treePropImageName: "prop_tree_autumn",
+        rockPropImageName: "prop_rock_autumn",
+        flowerPropImageName: "prop_flower_autumn",
         mascotIdleAssetName: "mascot_kitten_idle",
         mascotWalkAssetName: "mascot_kitten_walk",
         mascotCelebrateAssetName: "mascot_kitten_celebrate",

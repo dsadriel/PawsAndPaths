@@ -16,10 +16,19 @@ public final class CampaignProgressManager: ObservableObject {
     @Published public private(set) var coins: Int
 
     public init() {
-        let savedUnlocked = UserDefaults.standard.integer(forKey: unlockedLevelKey)
-        self.unlockedLevelIndex = max(1, savedUnlocked)
+        var savedUnlocked = UserDefaults.standard.integer(forKey: unlockedLevelKey)
+        var overrideArg = false
+        if let idx = CommandLine.arguments.firstIndex(of: "-unlockedLevel"), idx + 1 < CommandLine.arguments.count,
+           let parsed = Int(CommandLine.arguments[idx + 1]) {
+            savedUnlocked = parsed
+            overrideArg = true
+        }
+        let initialUnlocked = max(1, savedUnlocked)
+        self.unlockedLevelIndex = initialUnlocked
 
-        if let savedCompleted = UserDefaults.standard.array(forKey: completedLevelsKey) as? [Int] {
+        if overrideArg {
+            self.completedLevels = Set(1..<initialUnlocked)
+        } else if let savedCompleted = UserDefaults.standard.array(forKey: completedLevelsKey) as? [Int] {
             self.completedLevels = Set(savedCompleted)
         } else {
             self.completedLevels = []
@@ -58,8 +67,49 @@ public final class CampaignProgressManager: ObservableObject {
             unlockedLevelIndex = id + 1
         }
 
+        // Clear incomplete saved progress on completion
+        clearLevelProgress(id: id)
+
         save()
         return coinsEarned
+    }
+
+    // MARK: - Incomplete Level State Persistence
+    private let savedGridPrefix = "com.pawsandpaths.savedGrid."
+    private let savedElapsedPrefix = "com.pawsandpaths.savedElapsed."
+    private let savedHintsPrefix = "com.pawsandpaths.savedHints."
+
+    /// Saves incomplete level grid, elapsed time, and purchased hint positions.
+    public func saveLevelProgress(id: Int, grid: [[CellState]], elapsedSeconds: Int, hints: [GridPosition] = []) {
+        if let data = try? JSONEncoder().encode(grid) {
+            UserDefaults.standard.set(data, forKey: "\(savedGridPrefix)\(id)")
+            UserDefaults.standard.set(elapsedSeconds, forKey: "\(savedElapsedPrefix)\(id)")
+            if let hintData = try? JSONEncoder().encode(hints) {
+                UserDefaults.standard.set(hintData, forKey: "\(savedHintsPrefix)\(id)")
+            }
+        }
+    }
+
+    /// Loads incomplete level grid, elapsed time, and purchased hint positions if previously saved.
+    public func loadLevelProgress(id: Int) -> (grid: [[CellState]], elapsedSeconds: Int, hints: [GridPosition])? {
+        guard let data = UserDefaults.standard.data(forKey: "\(savedGridPrefix)\(id)"),
+              let grid = try? JSONDecoder().decode([[CellState]].self, from: data) else {
+            return nil
+        }
+        let elapsed = UserDefaults.standard.integer(forKey: "\(savedElapsedPrefix)\(id)")
+        var hints: [GridPosition] = []
+        if let hintData = UserDefaults.standard.data(forKey: "\(savedHintsPrefix)\(id)"),
+           let decodedHints = try? JSONDecoder().decode([GridPosition].self, from: hintData) {
+            hints = decodedHints
+        }
+        return (grid, elapsed, hints)
+    }
+
+    /// Clears saved incomplete progress for a specific level.
+    public func clearLevelProgress(id: Int) {
+        UserDefaults.standard.removeObject(forKey: "\(savedGridPrefix)\(id)")
+        UserDefaults.standard.removeObject(forKey: "\(savedElapsedPrefix)\(id)")
+        UserDefaults.standard.removeObject(forKey: "\(savedHintsPrefix)\(id)")
     }
 
     /// Checks if player can afford a hint.

@@ -70,7 +70,7 @@ public struct LevelNodeView: View {
         }
     }
 
-    // MARK: - Header Badge (Mascot or Completed Checkmark)
+    // MARK: - Header Badge (Mascot on Current Node)
     private var headerBadgeView: some View {
         HStack(spacing: 3) {
             if isCurrent {
@@ -81,16 +81,24 @@ public struct LevelNodeView: View {
                     .frame(width: 38, height: 38)
                     .offset(y: 4)
                     .shadow(color: Theme.Colors.woodDark.opacity(0.2), radius: 2, y: 1)
-            } else if isCompleted {
-                // Subtle checkmark badge for completed level
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 16, weight: .heavy))
-                    .foregroundColor(Theme.Colors.primaryAction.face)
-                    .background(Circle().fill(Color.white).padding(2))
-                    .shadow(color: Theme.Colors.woodDark.opacity(0.2), radius: 2, y: 1)
             } else {
                 Spacer().frame(height: 20)
             }
+        }
+    }
+
+    private var levelTheme: ChapterTheme {
+        level.theme
+    }
+
+    private var nodeActionPair: Theme.Colors.ActionPair {
+        switch levelTheme {
+        case .meadow:
+            return Theme.Colors.primaryAction
+        case .autumn:
+            return Theme.Colors.autumnAction
+        case .winter:
+            return Theme.Colors.winterAction
         }
     }
 
@@ -102,15 +110,9 @@ public struct LevelNodeView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-        } else if isCompleted {
+        } else if isCompleted || isUnlocked {
             return LinearGradient(
-                colors: [Theme.Colors.primaryAction.face, Theme.Colors.primaryAction.lip],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        } else if isUnlocked {
-            return LinearGradient(
-                colors: [Theme.Colors.primaryAction.face, Theme.Colors.primaryAction.lip],
+                colors: [nodeActionPair.face, nodeActionPair.lip],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -130,15 +132,9 @@ public struct LevelNodeView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-        } else if isCompleted {
+        } else if isCompleted || isUnlocked {
             return LinearGradient(
-                colors: [Theme.Colors.primaryAction.face.opacity(0.95), Theme.Colors.primaryAction.face],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        } else if isUnlocked {
-            return LinearGradient(
-                colors: [Theme.Colors.primaryAction.face.opacity(0.95), Theme.Colors.primaryAction.face],
+                colors: [nodeActionPair.face.opacity(0.95), nodeActionPair.face],
                 startPoint: .top,
                 endPoint: .bottom
             )
