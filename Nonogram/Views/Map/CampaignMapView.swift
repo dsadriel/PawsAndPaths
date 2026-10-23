@@ -232,6 +232,7 @@ public struct CampaignMapView: View {
             // Persistent Prominent Play Button
             Button {
                 HapticManager.shared.buttonPress()
+                SoundManager.shared.buttonPress()
                 activeGameLevel = currentLevel
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {

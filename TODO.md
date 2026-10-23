@@ -2,6 +2,12 @@
 
 ## Todo
 
+## In Progress
+
+## Blocked
+
+## Done
+
 ### Visual Autotiling and Theme Packs
   - due: 2026-10-30
   - tags: [visuals, themes, cozy]
@@ -11,16 +17,10 @@
   - steps:
       - [x] Implement decorative track autotiling curves and junctions
       - [x] Add cozy background palettes and theme asset packs
-      - [ ] Add sound effects and ambient cozy chimes
+      - [x] Add sound effects and ambient cozy chimes
     ```md
     Polish graphics with illustrated autotiling rail assets, theme DLC expansions, and background ambiance.
     ```
-
-## In Progress
-
-## Blocked
-
-## Done
 
 ### Campaign Progression & Duolingo Map
   - due: 2026-10-22

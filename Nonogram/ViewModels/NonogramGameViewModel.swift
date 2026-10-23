@@ -278,8 +278,10 @@ public final class NonogramGameViewModel: ObservableObject {
         switch state {
         case .path:
             HapticManager.shared.pathPlaced()
+            SoundManager.shared.pathPlaced()
         case .crossed:
             HapticManager.shared.crossPlaced()
+            SoundManager.shared.crossPlaced()
         case .empty:
             HapticManager.shared.cellCleared()
         }
@@ -298,6 +300,13 @@ public final class NonogramGameViewModel: ObservableObject {
                 colSlice.append(grid[r][c])
             }
             newColSat.append(level.isColClueSatisfied(colSlice, colIndex: c))
+        }
+
+        let newlySatisfiedRow = zip(rowSatisfaction, newRowSat).contains { !$0.0 && $0.1 }
+        let newlySatisfiedCol = zip(colSatisfaction, newColSat).contains { !$0.0 && $0.1 }
+        if (newlySatisfiedRow || newlySatisfiedCol) && !isSolved {
+            HapticManager.shared.clueSatisfied()
+            SoundManager.shared.clueSatisfied()
         }
 
         self.rowSatisfaction = newRowSat
@@ -387,6 +396,7 @@ public final class NonogramGameViewModel: ObservableObject {
                 isCompletedCelebration = true
             }
             HapticManager.shared.victory()
+            SoundManager.shared.victory()
 
             // Notify campaign progress: awards coins (5 for first completion, 1 for replay)
             if let camp = campaignLevel {

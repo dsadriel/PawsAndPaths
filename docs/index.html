@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paws & Paths — Cozy Nonogram Puzzle Game para iOS</title>
+  <meta name="description" content="Guie mascotes fofos em quebra-cabeças relaxantes de Nonogram. Conecte trilhos, colecione estrelas e relaxe sem cronômetro ou vidas limitadas no iOS.">
+  <link rel="icon" type="image/png" href="assets/mascot_kitten_idle.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sky-meadow-backdrop"></div>
+
+  <!-- Header -->
+  <header class="site-header" id="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <img src="assets/mascot_kitten_idle.png" alt="Paws & Paths Gatinho" class="brand-icon">
+        <span>Paws & Paths</span>
+      </a>
+
+      <nav aria-label="Navegação principal">
+        <ul class="nav-links">
+          <li><a href="#como-jogar" id="nav-how-to-play">Como Jogar</a></li>
+          <li><a href="#recursos" id="nav-features">Recursos</a></li>
+          <li><a href="#faq" id="nav-faq">Dúvidas</a></li>
+          <li><a href="support.html" id="nav-support">Suporte</a></li>
+          <li><a href="privacy.html" id="nav-privacy">Privacidade</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="hero" id="hero-section">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="cozy-pill">
+            <span>🐾 Quebra-Cabeça Aconchegante</span>
+          </div>
+          <h1>Conecte caminhos.<br>Ajude <span class="highlight">gatinhos fofos</span>.</h1>
+          <p class="hero-subtitle">
+            O clássico Nonogram reinventado com trilhas de trem e jornadas de resgate. Sem cronômetro, sem vidas limitadas e 100% dedutivo.
+          </p>
+
+          <div class="hero-actions">
+            <a href="https://apple.co" class="appstore-badge" id="btn-appstore-download">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.87-.9.04-2 .6-2.65 1.35-.58.65-1.08 1.73-.95 2.76 1.01.08 2.05-.49 2.68-1.24z"/>
+              </svg>
+              <div>
+                <span class="badge-sub">Disponível na</span>
+                <span class="badge-main">App Store</span>
+              </div>
+            </a>
+            <a href="#mini-puzzle" class="btn btn-cream" id="btn-test-drive">Testar no Navegador</a>
+          </div>
+
+          <div class="trust-bullets">
+            <div class="trust-item">
+              <img src="assets/icon_star.png" alt="Estrela" width="18" height="18">
+              <span>Zero Estresse</span>
+            </div>
+            <div class="trust-item">
+              <img src="assets/icon_seed_coin.png" alt="Semente" width="18" height="18">
+              <span>100% Offline</span>
+            </div>
+            <div class="trust-item">
+              <img src="assets/icon_hint_lamp.png" alt="Dica" width="18" height="18">
+              <span>Dedução Pura</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diorama Visual Card with Interactive Mini Nonogram -->
+        <div class="hero-visual">
+          <div class="diorama-frame">
+            <div class="diorama-top">
+              <div class="stars-row">
+                <img src="assets/icon_star.png" alt="Estrela 1">
+                <img src="assets/icon_star.png" alt="Estrela 2">
+                <img src="assets/icon_star.png" alt="Estrela 3">
+              </div>
+              <div class="coins-badge">
+                <img src="assets/icon_seed_coin.png" alt="Moedas">
+                <span id="demo-coins-counter">25 Sementes</span>
+              </div>
+            </div>
+
+            <div class="diorama-scene">
+              <div class="scene-decorations">
+                <img src="assets/prop_tree.png" alt="Árvore" class="decor-tree">
+                <img src="assets/prop_flower_bush.png" alt="Arbusto" class="decor-bush">
+              </div>
+
+              <div class="mascot-hero-wrap">
+                <img src="assets/mascot_kitten_idle.png" alt="Gatinho Mascote" id="hero-mascot-img" class="mascot-hero-img">
+                <img src="assets/prop_yarn_ball.png" alt="Novelo de Lã" class="yarn-hero-img">
+              </div>
+
+              <!-- Interactive Mini-Puzzle Demo -->
+              <div class="mini-puzzle-box" id="mini-puzzle">
+                <div class="mini-puzzle-header" id="puzzle-status-text">Clique nos blocos para ligar a trilha:</div>
+                <div class="mini-grid" id="mini-nonogram-grid">
+                  <!-- Cells will be populated by JS -->
+                </div>
+                <div class="mini-puzzle-footer" id="puzzle-clue-hint">
+                  Pista: Desenhe o caminho contínuo até o novelo!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Como Jogar Section -->
+    <section class="section" id="como-jogar">
+      <div class="container">
+        <div class="section-head">
+          <div class="cozy-pill">Simples e Inteligente</div>
+          <h2>Como Funciona o Nonogram de Caminhos</h2>
+          <p>Esqueça os quadrados abstratos em preto e branco. Aqui, cada número revela trilhos, pontes e curvas em direção à vitória.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="card-icon-wrap">
+              <img src="assets/icon_hint_lamp.png" alt="Pistas">
+            </div>
+            <h3>1. Analise as Pistas</h3>
+            <p>Os números no topo e ao lado da tela indicam exatamente quantos blocos de trilho existem em cada linha ou coluna.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="card-icon-wrap">
+              <img src="assets/prop_yarn_ball.png" alt="Trilhas">
+            </div>
+            <h3>2. Conecte a Rota</h3>
+            <p>Marque os blocos com o trilho de madeira e cruze com um 'X' as áreas vazias. Os trilhos formam caminhos orgânicos.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="card-icon-wrap">
+              <img src="assets/mascot_kitten_celebrate.png" alt="Comemoração">
+            </div>
+            <h3>3. Celebre com o Mascote</h3>
+            <p>Ao fechar a lógica correta, veja o gatinho correr até o novelo de lã em uma festa com confetes e recompensas!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Banner Pillars -->
+    <section class="container">
+      <div class="cozy-box-banner">
+        <div class="pillars-grid">
+          <div class="pillar-item">
+            <h4>🌿 Zero Estresse</h4>
+            <p>Sem cronômetros ou punições por erro. Jogue no seu próprio ritmo, com uma xícara de chá.</p>
+          </div>
+          <div class="pillar-item">
+            <h4>🧠 100% Dedutivo</h4>
+            <p>Sem chutes ou adivinhações. Cada fase é matematicamente projetada com solução lógica única.</p>
+          </div>
+          <div class="pillar-item">
+            <h4>📱 Feito para iOS</h4>
+            <p>Vibrações táteis delicadas com CoreHaptics e interface fluida nativa em SwiftUI.</p>
+          </div>
+          <div class="pillar-item">
+            <h4>🔒 Privacidade Total</h4>
+            <p>Sem cadastro, sem rastreamento de dados e totalmente jogável offline onde você estiver.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-head">
+          <div class="cozy-pill">Perguntas Frequentes</div>
+          <h2>Tudo o que você precisa saber</h2>
+          <p>Tire suas dúvidas sobre o lançamento e a jogabilidade do Paws & Paths.</p>
+        </div>
+
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>O jogo funciona sem internet (offline)?</summary>
+            <p>Sim! O Paws & Paths é 100% jogável offline. Todo o seu progresso de fases e estrelas fica salvo de forma segura no próprio dispositivo.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>O que acontece se eu ficar travado em um puzzle?</summary>
+            <p>Você pode usar o sistema de Dicas amigáveis usando as Sementes obtidas ao completar fases anteriores. A dica revela uma célula lógica sem estragar o desafio.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Existem vidas ou limite de tempo?</summary>
+            <p>Não. Acreditamos na filosofia "cozy": você nunca perderá vidas, não sofrerá penalidades e pode reiniciar ou desfazer movimentos a qualquer momento.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Como falar com o suporte ou sugerir novas fases?</summary>
+            <p>Você pode entrar em contato conosco a qualquer momento através da nossa <a href="support.html">Página de Suporte</a> ou pelo e-mail oficial.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="brand-link">
+          <img src="assets/mascot_kitten_idle.png" alt="Logo" class="brand-icon">
+          <span>Paws & Paths</span>
+        </div>
+
+        <ul class="footer-nav">
+          <li><a href="#como-jogar">Como Jogar</a></li>
+          <li><a href="#recursos">Recursos</a></li>
+          <li><a href="support.html">Suporte & Contato</a></li>
+          <li><a href="privacy.html">Política de Privacidade</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-copy">
+        <p>&copy; 2026 Adriel de Souza. Todos os direitos reservados. Apple e o logotipo da Apple são marcas registradas da Apple Inc.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Interactive Mini-Nonogram Script -->
+  <script>
+    // 4x4 Mini Nonogram Puzzle Solution:
+    // [1, 1, 0, 0]
+    // [0, 1, 1, 0]
+    // [0, 0, 1, 1]
+    // [0, 0, 0, 1]
+    const solution = [
+      [1, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 1, 1],
+      [0, 0, 0, 1]
+    ];
+    let userState = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ];
+
+    const gridEl = document.getElementById('mini-nonogram-grid');
+    const mascotEl = document.getElementById('hero-mascot-img');
+    const statusText = document.getElementById('puzzle-status-text');
+
+    function checkWin() {
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const expected = solution[r][c];
+          const actual = userState[r][c] === 1 ? 1 : 0;
+          if (expected !== actual) return false;
+        }
+      }
+      return true;
+    }
+
+    function renderGrid() {
+      gridEl.innerHTML = '';
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'mini-cell';
+          const val = userState[r][c];
+          if (val === 1) {
+            cell.classList.add('marked-path');
+            cell.textContent = '🛤️';
+          } else if (val === 2) {
+            cell.classList.add('marked-cross');
+            cell.textContent = '✕';
+          }
+
+          cell.addEventListener('click', () => {
+            // Cycle: 0 (empty) -> 1 (path) -> 2 (cross) -> 0
+            userState[r][c] = (userState[r][c] + 1) % 3;
+            renderGrid();
+
+            if (checkWin()) {
+              statusText.textContent = '🎉 Parabéns! O gatinho chegou ao novelo!';
+              statusText.style.color = '#4E9632';
+              mascotEl.src = 'assets/mascot_kitten_celebrate.png';
+            } else {
+              mascotEl.src = 'assets/mascot_kitten_idle.png';
+            }
+          });
+
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    renderGrid();
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "app": {
+    "bundle_id": "br.com.dsadriel.PawsAndPaths",
+    "udid": "booted",
+    "output_dir": "./screenshots/raw"
+  },
+  "steps": [
+    { "action": "launch", "args": ["-screen", "map"] },
+    { "action": "wait", "duration_ms": 1200 },
+    { "action": "screenshot", "name": "01_journey_map" },
+    { "action": "launch", "args": ["-screen", "game", "-level", "3"] },
+    { "action": "wait", "duration_ms": 1200 },
+    { "action": "screenshot", "name": "02_puzzle_grid" },
+    { "action": "launch", "args": ["-screen", "victory", "-level", "3"] },
+    { "action": "wait", "duration_ms": 1200 },
+    { "action": "screenshot", "name": "03_mascot_victory" },
+    { "action": "launch", "args": ["-screen", "hintOverlay", "-level", "3"] },
+    { "action": "wait", "duration_ms": 1200 },
+    { "action": "screenshot", "name": "04_hints_system" }
+  ]
+}
