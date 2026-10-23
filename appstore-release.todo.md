@@ -30,7 +30,7 @@
   - steps:
       - [x] Create dedicated GitHub Pages website under docs/ (index.html, privacy.html, support.html)
       - [x] Generate PrivacyInfo.xcprivacy manifest file in Xcode project
-      - [ ] Connect GitHub remote repository and enable GitHub Pages on /docs folder
+      - [x] Connect GitHub remote repository and enable GitHub Pages on /docs folder
       - [ ] Complete App Privacy declarations questionnaire in App Store Connect
     ```md
     Prepare mandatory compliance pages for Apple review hosted on GitHub Pages: privacy policy, support URL, and data privacy declaration.
